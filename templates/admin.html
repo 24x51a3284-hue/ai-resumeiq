@@ -200,7 +200,7 @@
     });
 
     // Score distribution chart
-    const scores = {{ analyses | map(attribute='ats_score') | list | tojson }};
+    const scores = [{{ analyses | map(attribute='ats_score') | list | join(', ') }}];
     const low  = scores.filter(s => s < 30).length;
     const mid  = scores.filter(s => s >= 30 && s < 60).length;
     const high = scores.filter(s => s >= 60).length;
@@ -230,7 +230,7 @@
             labels: ['Total Users', 'Analyses', 'Avg Score'],
             datasets: [{
                 label: 'Platform Stats',
-                data: {{ [total_users, total_analyses, avg_score] | tojson }},
+                data: [{{ total_users }}, {{ total_analyses }}, {{ avg_score }}],
                 backgroundColor: ['#6c63ff', '#3b82f6', '#22c55e'],
                 borderRadius: 6
             }]
@@ -245,5 +245,5 @@
         }
     });
 </script>
-</body>
+<div id="chatbot-container"><button id="chat-toggle" onclick="toggleChat()"><i class="fas fa-robot" id="chat-icon"></i></button><div id="chat-window" style="display:none"><div id="chat-header"><div class="d-flex align-items-center gap-2"><i class="fas fa-robot text-purple"></i><div><div style="font-weight:600;font-size:0.9rem">AI Assistant</div><div style="font-size:0.7rem;color:#22c55e">● Online</div></div></div><button onclick="toggleChat()" style="background:none;border:none;color:#a0aec0;cursor:pointer"><i class="fas fa-times"></i></button></div><div id="chat-messages"><div class="bot-msg">👋 Hi! Ask me anything about ResumeIQ!<br><br>• How to use the analyzer<br>• Understanding ATS score<br>• Resume tips<br>• Career guidance</div></div><div id="chat-input-area"><input type="text" id="chat-input" placeholder="Ask me anything..." onkeypress="handleChatKey(event)"><button onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button></div></div></div><script src="/static/js/chatbot.js"></script></body>
 </html>

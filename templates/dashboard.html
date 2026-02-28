@@ -320,5 +320,473 @@
     });
     {% endif %}
 </script>
+<div id="chatbot-container"><button id="chat-toggle" onclick="toggleChat()"><i class="fas fa-robot" id="chat-icon"></i></button><div id="chat-window" style="display:none"><div id="chat-header"><div class="d-flex align-items-center gap-2"><i class="fas fa-robot text-purple"></i><div><div style="font-weight:600;font-size:0.9rem">AI Assistant</div><div style="font-size:0.7rem;color:#22c55e">● Online</div></div></div><button onclick="toggleChat()" style="background:none;border:none;color:#a0aec0;cursor:pointer"><i class="fas fa-times"></i></button></div><div id="chat-messages"><div class="bot-msg">👋 Hi! Ask me anything about ResumeIQ!<br><br>• How to use the analyzer<br>• Understanding ATS score<br>• Resume tips<br>• Career guidance</div></div><div id="chat-input-area"><input type="text" id="chat-input" placeholder="Ask me anything..." onkeypress="handleChatKey(event)"><button onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button></div></div></div><script src="/static/js/chatbot.js"></script><!-- ============================================================
+     AI CHATBOT WIDGET
+     Add this just before </body> in dashboard.html and analyzer.html
+     ============================================================ -->
+
+<!-- Chatbot Toggle Button -->
+<button class="chatbot-fab" id="chatbotToggle" onclick="toggleChatbot()" title="AI Assistant">
+    <i class="fas fa-robot" id="chatbot-icon"></i>
+</button>
+
+<!-- Chatbot Window -->
+<div class="chatbot-window" id="chatbotWindow">
+    <!-- Header -->
+    <div class="chatbot-header">
+        <div class="d-flex align-items-center gap-2">
+            <div class="chatbot-avatar">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div>
+                <div class="chatbot-name">ResumeIQ Assistant</div>
+                <div class="chatbot-status">
+                    <span class="status-dot"></span> Online
+                </div>
+            </div>
+        </div>
+        <button class="chatbot-close" onclick="toggleChatbot()">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <!-- Messages Area -->
+    <div class="chatbot-messages" id="chatMessages">
+        <!-- Welcome message -->
+        <div class="chat-msg bot-msg">
+            <div class="chat-bubble">
+                👋 Hi! I'm your <strong>AI Resume Assistant</strong>!<br><br>
+                I can help you with:<br>
+                • How to improve your ATS score<br>
+                • Resume writing tips<br>
+                • Skill gap advice<br>
+                • Career guidance<br>
+                • How to use this tool<br><br>
+                What would you like to know? 😊
+            </div>
+            <div class="chat-time">Just now</div>
+        </div>
+    </div>
+
+    <!-- Quick Questions -->
+    <div class="quick-questions" id="quickQuestions">
+        <div class="quick-label">Quick Questions:</div>
+        <div class="quick-btns">
+            <button onclick="askQuick('How to improve my ATS score?')">📈 Improve ATS Score</button>
+            <button onclick="askQuick('What is TF-IDF?')">🤖 What is TF-IDF?</button>
+            <button onclick="askQuick('How to fix skill gaps?')">🎯 Fix Skill Gaps</button>
+            <button onclick="askQuick('Best resume tips?')">📝 Resume Tips</button>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="chatbot-input-area">
+        <input type="text" id="chatInput" class="chatbot-input"
+               placeholder="Ask me anything about resumes..."
+               onkeypress="handleChatKey(event)">
+        <button class="chatbot-send" onclick="sendMessage()">
+            <i class="fas fa-paper-plane"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Chatbot CSS -->
+<style>
+/* Floating Action Button */
+.chatbot-fab {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6c63ff, #3b82f6);
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: 0 8px 25px rgba(108,99,255,0.5);
+    z-index: 9999;
+    transition: transform 0.3s, box-shadow 0.3s;
+    animation: pulse 2s infinite;
+}
+.chatbot-fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 12px 35px rgba(108,99,255,0.7);
+}
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 8px 25px rgba(108,99,255,0.5); }
+    50%       { box-shadow: 0 8px 35px rgba(108,99,255,0.8); }
+}
+
+/* Chatbot Window */
+.chatbot-window {
+    position: fixed;
+    bottom: 100px;
+    right: 30px;
+    width: 360px;
+    height: 520px;
+    background: #131428;
+    border: 1px solid rgba(108,99,255,0.3);
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    z-index: 9998;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    transform: scale(0) translateY(20px);
+    transform-origin: bottom right;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+    opacity: 0;
+    pointer-events: none;
+}
+.chatbot-window.open {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* Header */
+.chatbot-header {
+    background: linear-gradient(135deg, #6c63ff, #3b82f6);
+    padding: 14px 16px;
+    border-radius: 20px 20px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.chatbot-avatar {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+}
+.chatbot-name   { color: white; font-weight: 600; font-size: 0.9rem; }
+.chatbot-status { color: rgba(255,255,255,0.8); font-size: 0.72rem; display: flex; align-items: center; gap: 4px; }
+.status-dot     { width: 6px; height: 6px; background: #4ade80; border-radius: 50%; animation: blink 1.5s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.chatbot-close  { background: rgba(255,255,255,0.15); border: none; color: white; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 0.8rem; transition: background 0.2s; }
+.chatbot-close:hover { background: rgba(255,255,255,0.3); }
+
+/* Messages */
+.chatbot-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(108,99,255,0.3) transparent;
+}
+.chat-msg { display: flex; flex-direction: column; max-width: 85%; }
+.bot-msg  { align-self: flex-start; }
+.user-msg { align-self: flex-end; }
+
+.chat-bubble {
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+.bot-msg .chat-bubble {
+    background: rgba(108,99,255,0.15);
+    border: 1px solid rgba(108,99,255,0.2);
+    color: #e2e8f0;
+    border-radius: 4px 16px 16px 16px;
+}
+.user-msg .chat-bubble {
+    background: linear-gradient(135deg, #6c63ff, #3b82f6);
+    color: white;
+    border-radius: 16px 16px 4px 16px;
+}
+.chat-time { font-size: 0.65rem; color: #475569; margin-top: 3px; padding: 0 4px; }
+.user-msg .chat-time { text-align: right; }
+
+/* Typing indicator */
+.typing-bubble { display: flex; gap: 4px; align-items: center; padding: 12px 14px; }
+.typing-dot { width: 6px; height: 6px; background: #6c63ff; border-radius: 50%; animation: typingBounce 1s infinite; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typingBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+
+/* Quick Questions */
+.quick-questions { padding: 8px 12px; border-top: 1px solid rgba(255,255,255,0.06); }
+.quick-label     { font-size: 0.7rem; color: #475569; margin-bottom: 6px; }
+.quick-btns      { display: flex; flex-wrap: wrap; gap: 5px; }
+.quick-btns button {
+    background: rgba(108,99,255,0.1);
+    border: 1px solid rgba(108,99,255,0.25);
+    color: #a78bfa;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.quick-btns button:hover { background: rgba(108,99,255,0.25); color: white; }
+
+/* Input */
+.chatbot-input-area {
+    padding: 12px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex;
+    gap: 8px;
+}
+.chatbot-input {
+    flex: 1;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(108,99,255,0.3);
+    border-radius: 12px;
+    padding: 10px 14px;
+    color: white;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.chatbot-input:focus  { border-color: #6c63ff; }
+.chatbot-input::placeholder { color: #475569; }
+.chatbot-send {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, #6c63ff, #3b82f6);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+}
+.chatbot-send:hover { transform: scale(1.1); }
+
+@media (max-width: 480px) {
+    .chatbot-window { width: calc(100vw - 20px); right: 10px; bottom: 80px; }
+    .chatbot-fab    { bottom: 20px; right: 20px; }
+}
+</style>
+
+<!-- Chatbot JavaScript -->
+<script>
+// ---- Toggle chatbot open/close ----
+function toggleChatbot() {
+    const win  = document.getElementById('chatbotWindow');
+    const icon = document.getElementById('chatbot-icon');
+    win.classList.toggle('open');
+    icon.className = win.classList.contains('open') ? 'fas fa-times' : 'fas fa-robot';
+}
+
+// ---- Send message on Enter key ----
+function handleChatKey(e) {
+    if (e.key === 'Enter') sendMessage();
+}
+
+// ---- Quick question shortcut ----
+function askQuick(question) {
+    document.getElementById('chatInput').value = question;
+    sendMessage();
+}
+
+// ---- Main send function ----
+function sendMessage() {
+    const input   = document.getElementById('chatInput');
+    const message = input.value.trim();
+    if (!message) return;
+
+    // Show user message
+    appendMessage(message, 'user');
+    input.value = '';
+
+    // Hide quick questions after first message
+    document.getElementById('quickQuestions').style.display = 'none';
+
+    // Show typing indicator
+    showTyping();
+
+    // Get AI response after short delay (simulates thinking)
+    setTimeout(function () {
+        removeTyping();
+        const response = getAIResponse(message);
+        appendMessage(response, 'bot');
+    }, 800 + Math.random() * 600);
+}
+
+// ---- Add message to chat ----
+function appendMessage(text, sender) {
+    const messages = document.getElementById('chatMessages');
+    const now      = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+    const div = document.createElement('div');
+    div.className = `chat-msg ${sender}-msg`;
+    div.innerHTML = `
+        <div class="chat-bubble">${text}</div>
+        <div class="chat-time">${now}</div>
+    `;
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+}
+
+// ---- Typing indicator ----
+function showTyping() {
+    const messages = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'chat-msg bot-msg';
+    div.id        = 'typing-indicator';
+    div.innerHTML = `<div class="chat-bubble typing-bubble">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+    </div>`;
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+}
+function removeTyping() {
+    const t = document.getElementById('typing-indicator');
+    if (t) t.remove();
+}
+
+// ---- AI Response Engine ----
+// This is a rule-based chatbot with smart keyword matching
+function getAIResponse(message) {
+    const msg = message.toLowerCase();
+
+    // ATS Score questions
+    if (msg.includes('ats') || msg.includes('score') || msg.includes('improve score')) {
+        return `📈 <strong>How to Improve Your ATS Score:</strong><br><br>
+        1️⃣ <strong>Use exact keywords</strong> from the job description<br>
+        2️⃣ <strong>Add all required skills</strong> in your skills section<br>
+        3️⃣ <strong>Use standard headings</strong> (Experience, Education, Skills)<br>
+        4️⃣ <strong>Avoid graphics/tables</strong> — ATS can't read them<br>
+        5️⃣ <strong>Quantify achievements</strong> — "Improved performance by 30%"<br>
+        6️⃣ <strong>Save as PDF</strong> for best compatibility<br><br>
+        🎯 Aim for <strong>70%+ score</strong> for a strong match!`;
+    }
+
+    // TF-IDF questions
+    if (msg.includes('tfidf') || msg.includes('tf-idf') || msg.includes('tf idf') || msg.includes('algorithm')) {
+        return `🤖 <strong>What is TF-IDF?</strong><br><br>
+        TF-IDF = <strong>Term Frequency × Inverse Document Frequency</strong><br><br>
+        📌 <strong>TF (Term Frequency):</strong><br>
+        How often a word appears in your resume<br><br>
+        📌 <strong>IDF (Inverse Document Frequency):</strong><br>
+        How rare/important that word is overall<br><br>
+        📌 <strong>Cosine Similarity:</strong><br>
+        Measures angle between resume vector and job description vector. Closer = better match!<br><br>
+        💡 This is the <strong>same algorithm</strong> real ATS systems use!`;
+    }
+
+    // Skill gap questions
+    if (msg.includes('skill gap') || msg.includes('missing skill') || msg.includes('fix skill')) {
+        return `🎯 <strong>How to Fix Skill Gaps:</strong><br><br>
+        1️⃣ <strong>Check missing skills</strong> in your analysis results<br>
+        2️⃣ <strong>Learn top 3 missing skills</strong> first (highest priority)<br>
+        3️⃣ <strong>Free learning resources:</strong><br>
+        • Coursera.org<br>
+        • Udemy.com<br>
+        • YouTube tutorials<br>
+        • Google Skills Boost<br><br>
+        4️⃣ <strong>Add certifications</strong> to your resume<br>
+        5️⃣ <strong>Build projects</strong> using new skills<br>
+        6️⃣ <strong>Re-analyze</strong> your resume after learning!`;
+    }
+
+    // Resume tips
+    if (msg.includes('resume tip') || msg.includes('best tip') || msg.includes('improve resume')) {
+        return `📝 <strong>Top Resume Tips:</strong><br><br>
+        ✅ Keep it <strong>1-2 pages max</strong><br>
+        ✅ Use <strong>action verbs</strong>: Developed, Built, Led, Designed<br>
+        ✅ <strong>Quantify achievements</strong>: "Reduced load time by 40%"<br>
+        ✅ Add <strong>GitHub/Portfolio</strong> link<br>
+        ✅ Use <strong>clean formatting</strong> — no photos or borders<br>
+        ✅ <strong>Tailor resume</strong> for each job application<br>
+        ✅ Include <strong>relevant keywords</strong> from job description<br>
+        ✅ Add <strong>certifications</strong> section<br>
+        ✅ Proofread for <strong>spelling errors</strong><br><br>
+        💡 Use our analyzer to check your score!`;
+    }
+
+    // Career questions
+    if (msg.includes('career') || msg.includes('job') || msg.includes('role') || msg.includes('path')) {
+        return `🚀 <strong>Career Path Advice:</strong><br><br>
+        Based on B.Tech CSE-DS, top careers are:<br><br>
+        🤖 <strong>Data Scientist</strong> — Python, ML, Statistics<br>
+        🧠 <strong>ML Engineer</strong> — TensorFlow, PyTorch, MLOps<br>
+        📊 <strong>Data Analyst</strong> — SQL, Tableau, Excel<br>
+        🌐 <strong>Full Stack Dev</strong> — React, Node.js, MongoDB<br>
+        ☁️ <strong>Cloud Engineer</strong> — AWS, Docker, Kubernetes<br><br>
+        💡 <strong>Tip:</strong> Pick ONE path and go deep rather than learning everything!`;
+    }
+
+    // How to use the tool
+    if (msg.includes('how to use') || msg.includes('how does') || msg.includes('help') || msg.includes('guide')) {
+        return `📖 <strong>How to Use AI ResumeIQ:</strong><br><br>
+        <strong>Step 1:</strong> Go to <em>Analyze Resume</em> page<br>
+        <strong>Step 2:</strong> Upload your PDF or DOCX resume<br>
+        <strong>Step 3:</strong> Copy & paste a job description from LinkedIn/Naukri<br>
+        <strong>Step 4:</strong> Click <em>"Analyze with AI"</em><br>
+        <strong>Step 5:</strong> View your ATS Score, Skill Gap & Career Tips<br>
+        <strong>Step 6:</strong> Download your PDF Report<br><br>
+        🏆 Also try <strong>Rank Multiple Resumes</strong> feature!`;
+    }
+
+    // Python questions
+    if (msg.includes('python') || msg.includes('programming') || msg.includes('coding')) {
+        return `🐍 <strong>Python for Data Science:</strong><br><br>
+        Essential libraries to learn:<br>
+        📊 <strong>Pandas</strong> — Data manipulation<br>
+        🔢 <strong>NumPy</strong> — Numerical computing<br>
+        📈 <strong>Matplotlib/Seaborn</strong> — Data visualization<br>
+        🤖 <strong>Scikit-learn</strong> — Machine learning<br>
+        🧠 <strong>TensorFlow/PyTorch</strong> — Deep learning<br>
+        🌐 <strong>Flask/FastAPI</strong> — Web deployment<br><br>
+        💡 Start with Pandas and NumPy first!`;
+    }
+
+    // Greeting
+    if (msg.includes('hi') || msg.includes('hello') || msg.includes('hey') || msg.includes('namaste')) {
+        return `👋 <strong>Hello!</strong> Welcome to AI ResumeIQ!<br><br>
+        I'm your personal Resume Assistant. I can help you with:<br>
+        • 📈 Improving your ATS score<br>
+        • 🎯 Fixing skill gaps<br>
+        • 📝 Resume writing tips<br>
+        • 🚀 Career guidance<br>
+        • 🤖 Understanding AI algorithms<br><br>
+        What would you like to know? 😊`;
+    }
+
+    // Thank you
+    if (msg.includes('thank') || msg.includes('thanks') || msg.includes('good')) {
+        return `😊 You're welcome! Best of luck with your job search!<br><br>
+        💪 Remember: A great resume opens doors, your skills keep you there!<br><br>
+        Feel free to ask anything else anytime! 🚀`;
+    }
+
+    // Creator / about
+    if (msg.includes('who made') || msg.includes('creator') || msg.includes('developer') || msg.includes('about')) {
+        return `👨‍💻 <strong>About AI ResumeIQ:</strong><br><br>
+        <strong>Developer:</strong> Naik Mohammed Fawaz<br>
+        <strong>Branch:</strong> B.Tech CSE-DS, SREC<br>
+        <strong>Supervisor:</strong> Mrs. K. Salama Khatoon, M.Tech<br>
+        Asst. Professor, Dept. of CSE(DS), SREC<br><br>
+        <strong>Tech Stack:</strong><br>
+        🐍 Python + Flask (Backend)<br>
+        🧠 NLP + TF-IDF + Cosine Similarity<br>
+        🎨 HTML5 + CSS3 + Bootstrap 5<br>
+        📊 Chart.js (Visualizations)<br>
+        🗄️ SQLite (Database)`;
+    }
+
+    // Default response
+    return `🤔 I'm not sure about that specific question.<br><br>
+    I can help you with:<br>
+    • 📈 <strong>ATS score improvement</strong><br>
+    • 🎯 <strong>Skill gap analysis</strong><br>
+    • 📝 <strong>Resume tips</strong><br>
+    • 🚀 <strong>Career guidance</strong><br>
+    • 🤖 <strong>How TF-IDF works</strong><br>
+    • 📖 <strong>How to use this tool</strong><br><br>
+    Try asking one of these topics! 😊`;
+}
+</script>
+
 </body>
 </html>

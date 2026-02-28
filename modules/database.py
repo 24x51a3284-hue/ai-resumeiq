@@ -88,14 +88,14 @@ def init_db():
     # ---- Create default admin user ----
     # Check if admin already exists
     existing_admin = cursor.execute(
-        'SELECT id FROM users WHERE email = ?', ('admin@resumematcher.com',)
+        'SELECT id FROM users WHERE email = ?', ('24x51a3284@srecnandyal.edu.in',)
     ).fetchone()
 
     if not existing_admin:
         from datetime import datetime
         cursor.execute(
             'INSERT INTO users (username, email, password, role, created_at) VALUES (?, ?, ?, ?, ?)',
-            ('admin', 'admin@resumematcher.com', 'admin123', 'admin', datetime.now().isoformat())
+            ('admin', '24x51a3284@srecnandyal.edu.in', 'Naik@2007', 'admin', datetime.now().isoformat())
         )
         print("✅ Default admin created: admin@resumematcher.com / admin123")
 
