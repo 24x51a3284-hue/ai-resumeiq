@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Matcher | Career Intelligence System</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Our custom CSS -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top glass-nav">
+    <div class="container">
+        <!-- Logo -->
+        <a class="navbar-brand fw-bold" href="/">
+            <i class="fas fa-brain me-2 text-purple"></i>
+            <span class="gradient-text">AI ResumeIQ</span>
+        </a>
+
+        <!-- Mobile toggle button -->
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Nav links -->
+        <div class="collapse navbar-collapse" id="navMenu">
+            <ul class="navbar-nav ms-auto align-items-center gap-2">
+                <li class="nav-item">
+                    <a class="nav-link" href="#features">Features</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#how-it-works">How It Works</a>
+                </li>
+                <li class="nav-item">
+                    <a class="btn btn-outline-light btn-sm px-4" href="/login">Login</a>
+                </li>
+                <li class="nav-item">
+                    <a class="btn btn-gradient btn-sm px-4" href="/signup">Get Started Free</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- ===== HERO SECTION ===== -->
+<section class="hero-section d-flex align-items-center">
+    <!-- Animated background particles -->
+    <div class="particles" id="particles"></div>
+
+    <div class="container text-center position-relative">
+        <!-- Badge -->
+        <div class="hero-badge mb-4" data-aos="fade-up">
+            <span class="badge-pill">
+                <i class="fas fa-sparkles me-2"></i>Powered by NLP & Machine Learning
+            </span>
+        </div>
+
+        <!-- Main Title -->
+        <h1 class="hero-title" data-aos="fade-up" data-aos-delay="100">
+            Beat the ATS System with
+            <span class="gradient-text d-block">AI-Powered Resume Analysis</span>
+        </h1>
+
+        <!-- Subtitle -->
+        <p class="hero-subtitle mx-auto" data-aos="fade-up" data-aos-delay="200">
+            Upload your resume, paste the job description, and get an instant
+            <strong>skill gap analysis</strong>, <strong>ATS score</strong>, and
+            <strong>AI career recommendations</strong> in seconds.
+        </p>
+
+        <!-- CTA Buttons -->
+        <div class="hero-buttons d-flex gap-3 justify-content-center flex-wrap" data-aos="fade-up" data-aos-delay="300">
+            <a href="/signup" class="btn btn-gradient btn-lg px-5 py-3">
+                <i class="fas fa-rocket me-2"></i>Analyze My Resume Free
+            </a>
+            <a href="#how-it-works" class="btn btn-outline-light btn-lg px-5 py-3">
+                <i class="fas fa-play-circle me-2"></i>See How It Works
+            </a>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="hero-stats d-flex justify-content-center gap-5 mt-5 flex-wrap" data-aos="fade-up" data-aos-delay="400">
+            <div class="stat-item text-center">
+                <div class="stat-number gradient-text">500+</div>
+                <div class="stat-label">Skills Database</div>
+            </div>
+            <div class="stat-item text-center">
+                <div class="stat-number gradient-text">99%</div>
+                <div class="stat-label">Accuracy</div>
+            </div>
+            <div class="stat-item text-center">
+                <div class="stat-number gradient-text">3s</div>
+                <div class="stat-label">Analysis Time</div>
+            </div>
+        </div>
+
+        <!-- Scroll indicator -->
+        <div class="scroll-indicator mt-5">
+            <i class="fas fa-chevron-down"></i>
+        </div>
+    </div>
+</section>
+
+<!-- ===== FEATURES SECTION ===== -->
+<section id="features" class="section-dark py-6">
+    <div class="container">
+        <div class="section-header text-center mb-5">
+            <span class="section-tag">Why Choose Us</span>
+            <h2 class="section-title">Everything You Need to <span class="gradient-text">Land Your Dream Job</span></h2>
+            <p class="section-subtitle">Our AI system analyzes resumes like a real ATS system</p>
+        </div>
+
+        <div class="row g-4">
+            <!-- Feature Cards -->
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="0">
+                <div class="feature-card">
+                    <div class="feature-icon bg-purple">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h5>NLP Skill Extraction</h5>
+                    <p>Advanced Natural Language Processing identifies 500+ technical and soft skills from your resume automatically.</p>
+                </div>
+            </div>
+
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="feature-card">
+                    <div class="feature-icon bg-blue">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <h5>TF-IDF Similarity Score</h5>
+                    <p>Uses the same algorithm as enterprise ATS systems to calculate how well your resume matches the job.</p>
+                </div>
+            </div>
+
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="feature-card">
+                    <div class="feature-icon bg-green">
+                        <i class="fas fa-gap"></i>
+                    </div>
+                    <h5>Skill Gap Analysis</h5>
+                    <p>Instantly see which skills you're missing and get personalized learning recommendations.</p>
+                </div>
+            </div>
+
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="300">
+                <div class="feature-card">
+                    <div class="feature-icon bg-orange">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <h5>Resume Ranking</h5>
+                    <p>Compare multiple resumes against one job description. Find the best candidate instantly.</p>
+                </div>
+            </div>
+
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="400">
+                <div class="feature-card">
+                    <div class="feature-icon bg-pink">
+                        <i class="fas fa-compass"></i>
+                    </div>
+                    <h5>AI Career Guidance</h5>
+                    <p>Get intelligent career path recommendations based on your current skills and experience.</p>
+                </div>
+            </div>
+
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="500">
+                <div class="feature-card">
+                    <div class="feature-icon bg-teal">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <h5>PDF Report Download</h5>
+                    <p>Download a professional PDF report with complete analysis, recommendations, and action plan.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== HOW IT WORKS ===== -->
+<section id="how-it-works" class="section-darker py-6">
+    <div class="container">
+        <div class="section-header text-center mb-5">
+            <span class="section-tag">Simple Process</span>
+            <h2 class="section-title">How It <span class="gradient-text">Works</span></h2>
+        </div>
+
+        <div class="row g-4 align-items-center">
+            <div class="col-md-3 text-center">
+                <div class="step-card">
+                    <div class="step-number">01</div>
+                    <i class="fas fa-upload step-icon"></i>
+                    <h5>Upload Resume</h5>
+                    <p>Drag & drop your PDF or DOCX resume</p>
+                </div>
+            </div>
+            <div class="col-md-1 text-center d-none d-md-block">
+                <i class="fas fa-arrow-right text-purple fs-2"></i>
+            </div>
+            <div class="col-md-3 text-center">
+                <div class="step-card">
+                    <div class="step-number">02</div>
+                    <i class="fas fa-paste step-icon"></i>
+                    <h5>Paste Job Description</h5>
+                    <p>Copy and paste the job posting you want to apply for</p>
+                </div>
+            </div>
+            <div class="col-md-1 text-center d-none d-md-block">
+                <i class="fas fa-arrow-right text-purple fs-2"></i>
+            </div>
+            <div class="col-md-3 text-center">
+                <div class="step-card">
+                    <div class="step-number">03</div>
+                    <i class="fas fa-chart-bar step-icon"></i>
+                    <h5>Get AI Analysis</h5>
+                    <p>Receive your score, skill gaps, and career advice</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== CTA SECTION ===== -->
+<section class="cta-section py-6 text-center">
+    <div class="container">
+        <h2 class="cta-title mb-3">Ready to Get Your Dream Job?</h2>
+        <p class="cta-subtitle mb-4">Join thousands of job seekers who improved their resumes with AI</p>
+        <a href="/signup" class="btn btn-gradient btn-lg px-5 py-3">
+            <i class="fas fa-rocket me-2"></i>Start Free Analysis Now
+        </a>
+    </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer-section py-4">
+    <div class="container text-center">
+        <div class="footer-brand mb-3">
+            <i class="fas fa-brain me-2 text-purple"></i>
+            <span class="gradient-text fw-bold">AI ResumeIQ</span>
+        </div>
+        <p class="text-muted small">
+            Built with ❤️ using Python, Flask, NLP & Machine Learning
+            <br>B.Tech CSE (Data Science) Minor Project
+        </p>
+        <div class="footer-links mt-2">
+            <a href="/login" class="text-muted me-3 small">Login</a>
+            <a href="/signup" class="text-muted me-3 small">Sign Up</a>
+        </div>
+    </div>
+</footer>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Our custom JS -->
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+<script>
+    // Create floating particle effect on hero
+    function createParticles() {
+        const container = document.getElementById('particles');
+        if (!container) return;
+        for (let i = 0; i < 30; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.style.cssText = `
+                left: ${Math.random() * 100}%;
+                animation-duration: ${3 + Math.random() * 5}s;
+                animation-delay: ${Math.random() * 3}s;
+                width: ${2 + Math.random() * 4}px;
+                height: ${2 + Math.random() * 4}px;
+                opacity: ${0.2 + Math.random() * 0.5};
+            `;
+            container.appendChild(p);
+        }
+    }
+    createParticles();
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) target.scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+</script>
+</body>
+</html>

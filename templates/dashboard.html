@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | AI ResumeIQ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body class="dashboard-body">
+
+<!-- ===== SIDEBAR ===== -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <i class="fas fa-brain text-purple"></i>
+        <span class="gradient-text ms-2 fw-bold">ResumeIQ</span>
+    </div>
+
+    <nav class="sidebar-nav">
+        <a href="/dashboard" class="sidebar-link active">
+            <i class="fas fa-home"></i><span>Dashboard</span>
+        </a>
+        <a href="/analyzer" class="sidebar-link">
+            <i class="fas fa-search"></i><span>Analyze Resume</span>
+        </a>
+        <a href="/analyzer#rank" class="sidebar-link">
+            <i class="fas fa-trophy"></i><span>Rank Resumes</span>
+        </a>
+        <a href="#history" class="sidebar-link" onclick="loadHistory()">
+            <i class="fas fa-history"></i><span>History</span>
+        </a>
+        {% if username == 'admin' %}
+        <a href="/admin" class="sidebar-link">
+            <i class="fas fa-shield-alt"></i><span>Admin Panel</span>
+        </a>
+        {% endif %}
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ username[0].upper() }}</div>
+            <div>
+                <div class="text-white small fw-semibold">{{ username }}</div>
+                <div class="text-muted" style="font-size:11px">Logged in</div>
+            </div>
+        </div>
+        <a href="/logout" class="btn btn-sm btn-outline-danger mt-2 w-100">
+            <i class="fas fa-sign-out-alt me-1"></i>Logout
+        </a>
+    </div>
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="main-content" id="mainContent">
+
+    <!-- Top Bar -->
+    <div class="topbar">
+        <button class="btn btn-dark btn-sm me-3" id="sidebarToggle">
+            <i class="fas fa-bars"></i>
+        </button>
+        <h4 class="topbar-title mb-0">Dashboard</h4>
+        <div class="ms-auto">
+            <a href="/analyzer" class="btn btn-gradient btn-sm px-4">
+                <i class="fas fa-plus me-2"></i>New Analysis
+            </a>
+        </div>
+    </div>
+
+    <!-- Welcome Banner -->
+    <div class="welcome-banner mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h4 class="mb-1">Welcome back, <span class="gradient-text">{{ username }}</span>! 👋</h4>
+                <p class="text-muted mb-0">Here's your resume analysis overview</p>
+            </div>
+            <a href="/analyzer" class="btn btn-gradient px-4">
+                <i class="fas fa-rocket me-2"></i>Analyze New Resume
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card">
+                <div class="stat-card-icon bg-purple">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <div class="stat-card-info">
+                    <div class="stat-card-number" id="total-analyses">
+                        {{ analyses|length }}
+                    </div>
+                    <div class="stat-card-label">Total Analyses</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card">
+                <div class="stat-card-icon bg-green">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="stat-card-info">
+                    <div class="stat-card-number" id="avg-score">
+                        {% if analyses %}
+                            {{ (analyses | sum(attribute='ats_score') / analyses|length)|round(1) }}%
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </div>
+                    <div class="stat-card-label">Average Score</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card">
+                <div class="stat-card-icon bg-blue">
+                    <i class="fas fa-star"></i>
+                </div>
+                <div class="stat-card-info">
+                    <div class="stat-card-number" id="best-score">
+                        {% if analyses %}
+                            {{ analyses | map(attribute='ats_score') | max | round(1) }}%
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </div>
+                    <div class="stat-card-label">Best Score</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card">
+                <div class="stat-card-icon bg-orange">
+                    <i class="fas fa-lightbulb"></i>
+                </div>
+                <div class="stat-card-info">
+                    <div class="stat-card-number">AI</div>
+                    <div class="stat-card-label">Career Advisor</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-4 mb-4">
+        <!-- Score History Chart -->
+        <div class="col-lg-8">
+            <div class="card-dark">
+                <div class="card-dark-header">
+                    <h6 class="mb-0"><i class="fas fa-chart-line me-2 text-purple"></i>Score History</h6>
+                </div>
+                <div class="card-dark-body">
+                    <canvas id="scoreChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Score Meter -->
+        <div class="col-lg-4">
+            <div class="card-dark">
+                <div class="card-dark-header">
+                    <h6 class="mb-0"><i class="fas fa-gauge me-2 text-purple"></i>Latest Score</h6>
+                </div>
+                <div class="card-dark-body text-center">
+                    {% if analyses %}
+                        <div class="score-donut-container">
+                            <canvas id="latestScoreChart" width="200" height="200"></canvas>
+                            <div class="score-donut-label">
+                                <div class="score-donut-number">{{ analyses[0]['ats_score']|round(0)|int }}%</div>
+                                <div class="score-donut-text">ATS Score</div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="empty-state py-4">
+                            <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No analyses yet.<br>Upload your first resume!</p>
+                            <a href="/analyzer" class="btn btn-gradient btn-sm">Start Now</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Analyses Table -->
+    <div class="card-dark mb-4" id="history">
+        <div class="card-dark-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="fas fa-history me-2 text-purple"></i>Recent Analyses</h6>
+            <a href="/analyzer" class="btn btn-gradient btn-sm">
+                <i class="fas fa-plus me-1"></i>New
+            </a>
+        </div>
+        <div class="card-dark-body p-0">
+            {% if analyses %}
+            <div class="table-responsive">
+                <table class="table table-dark table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Resume File</th>
+                            <th>ATS Score</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in analyses %}
+                        <tr>
+                            <td>
+                                <i class="fas fa-file-pdf text-danger me-2"></i>
+                                {{ a['resume_filename'][-30:] if a['resume_filename']|length > 30 else a['resume_filename'] }}
+                            </td>
+                            <td>
+                                <span class="score-badge {% if a['ats_score'] >= 60 %}score-good{% elif a['ats_score'] >= 30 %}score-mid{% else %}score-low{% endif %}">
+                                    {{ a['ats_score']|round(1) }}%
+                                </span>
+                            </td>
+                            <td class="text-muted small">{{ a['created_at'][:10] }}</td>
+                            <td>
+                                <a href="/api/download-report/{{ a['id'] }}"
+                                   class="btn btn-sm btn-outline-purple">
+                                    <i class="fas fa-download me-1"></i>PDF Report
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state text-center py-5">
+                <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No analyses yet. Upload your first resume to get started!</p>
+                <a href="/analyzer" class="btn btn-gradient">Analyze My Resume</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div><!-- end main-content -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // ---- Sidebar Toggle ----
+    document.getElementById('sidebarToggle').addEventListener('click', function () {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+        document.getElementById('mainContent').classList.toggle('expanded');
+    });
+
+    // ---- Score History Line Chart ----
+    {% if analyses %}
+    const scoreData = [
+        {% for a in analyses|reverse %}
+            {{ a['ats_score']|round(1) }},
+        {% endfor %}
+    ];
+    const scoreLabels = [
+        {% for a in analyses|reverse %}
+            '{{ a["created_at"][:10] }}',
+        {% endfor %}
+    ];
+
+    new Chart(document.getElementById('scoreChart'), {
+        type: 'line',
+        data: {
+            labels: scoreLabels,
+            datasets: [{
+                label: 'ATS Score',
+                data: scoreData,
+                borderColor: '#6c63ff',
+                backgroundColor: 'rgba(108,99,255,0.15)',
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#6c63ff',
+                pointRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: '#a0aec0' } } },
+            scales: {
+                y: {
+                    min: 0, max: 100,
+                    ticks: { color: '#a0aec0' },
+                    grid: { color: 'rgba(255,255,255,0.05)' }
+                },
+                x: {
+                    ticks: { color: '#a0aec0' },
+                    grid: { color: 'rgba(255,255,255,0.05)' }
+                }
+            }
+        }
+    });
+
+    // ---- Latest Score Donut Chart ----
+    const latestScore = {{ analyses[0]['ats_score']|round(1) }};
+    new Chart(document.getElementById('latestScoreChart'), {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [latestScore, 100 - latestScore],
+                backgroundColor: [latestScore >= 60 ? '#22c55e' : latestScore >= 30 ? '#f59e0b' : '#ef4444', '#1e2035'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            cutout: '80%',
+            responsive: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } }
+        }
+    });
+    {% else %}
+    // No data: show empty chart
+    new Chart(document.getElementById('scoreChart'), {
+        type: 'line',
+        data: { labels: ['No Data'], datasets: [{ data: [0], borderColor: '#6c63ff' }] },
+        options: { responsive: true, scales: { y: { ticks: { color: '#a0aec0' } }, x: { ticks: { color: '#a0aec0' } } } }
+    });
+    {% endif %}
+</script>
+</body>
+</html>

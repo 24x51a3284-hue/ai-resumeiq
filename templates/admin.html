@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel | AI ResumeIQ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body class="dashboard-body">
+
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <i class="fas fa-shield-alt text-purple"></i>
+        <span class="gradient-text ms-2 fw-bold">Admin</span>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="/dashboard" class="sidebar-link">
+            <i class="fas fa-home"></i><span>Dashboard</span>
+        </a>
+        <a href="/admin" class="sidebar-link active">
+            <i class="fas fa-users"></i><span>All Users</span>
+        </a>
+        <a href="/analyzer" class="sidebar-link">
+            <i class="fas fa-search"></i><span>Analyze Resume</span>
+        </a>
+    </nav>
+    <div class="sidebar-footer">
+        <a href="/logout" class="btn btn-sm btn-outline-danger w-100">
+            <i class="fas fa-sign-out-alt me-1"></i>Logout
+        </a>
+    </div>
+</div>
+
+<div class="main-content" id="mainContent">
+    <div class="topbar">
+        <button class="btn btn-dark btn-sm me-3" id="sidebarToggle">
+            <i class="fas fa-bars"></i>
+        </button>
+        <h4 class="topbar-title mb-0">
+            <i class="fas fa-shield-alt me-2 text-purple"></i>Admin Dashboard
+        </h4>
+    </div>
+
+    <!-- Admin Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-sm-4">
+            <div class="stat-card">
+                <div class="stat-card-icon bg-purple">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-card-info">
+                    <div class="stat-card-number">{{ total_users }}</div>
+                    <div class="stat-card-label">Total Users</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="stat-card">
+                <div class="stat-card-icon bg-blue">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <div class="stat-card-info">
+                    <div class="stat-card-number">{{ total_analyses }}</div>
+                    <div class="stat-card-label">Total Analyses</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="stat-card">
+                <div class="stat-card-icon bg-green">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="stat-card-info">
+                    <div class="stat-card-number">{{ avg_score }}%</div>
+                    <div class="stat-card-label">Avg ATS Score</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Score Distribution Chart -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card-dark">
+                <div class="card-dark-header">
+                    <h6 class="mb-0"><i class="fas fa-chart-bar me-2 text-purple"></i>Score Distribution</h6>
+                </div>
+                <div class="card-dark-body">
+                    <canvas id="distributionChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card-dark">
+                <div class="card-dark-header">
+                    <h6 class="mb-0"><i class="fas fa-users me-2 text-blue"></i>User Activity</h6>
+                </div>
+                <div class="card-dark-body">
+                    <canvas id="activityChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- All Users Table -->
+    <div class="card-dark mb-4">
+        <div class="card-dark-header">
+            <h6 class="mb-0"><i class="fas fa-users me-2 text-purple"></i>All Registered Users</h6>
+        </div>
+        <div class="card-dark-body p-0">
+            <div class="table-responsive">
+                <table class="table table-dark table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Joined</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user['id'] }}</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="user-avatar-sm">{{ user['username'][0].upper() }}</div>
+                                    {{ user['username'] }}
+                                </div>
+                            </td>
+                            <td class="text-muted">{{ user['email'] }}</td>
+                            <td>
+                                <span class="badge {% if user['role'] == 'admin' %}bg-purple{% else %}bg-secondary{% endif %}">
+                                    {{ user['role'] }}
+                                </span>
+                            </td>
+                            <td class="text-muted small">{{ user['created_at'][:10] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- All Analyses Table -->
+    <div class="card-dark">
+        <div class="card-dark-header">
+            <h6 class="mb-0"><i class="fas fa-list me-2 text-purple"></i>All Resume Analyses</h6>
+        </div>
+        <div class="card-dark-body p-0">
+            <div class="table-responsive">
+                <table class="table table-dark table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Resume</th>
+                            <th>ATS Score</th>
+                            <th>Date</th>
+                            <th>Report</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in analyses %}
+                        <tr>
+                            <td>{{ a['username'] }}</td>
+                            <td class="text-muted small">{{ a['resume_filename'][-25:] }}</td>
+                            <td>
+                                <span class="score-badge {% if a['ats_score'] >= 60 %}score-good{% elif a['ats_score'] >= 30 %}score-mid{% else %}score-low{% endif %}">
+                                    {{ a['ats_score']|round(1) }}%
+                                </span>
+                            </td>
+                            <td class="text-muted small">{{ a['created_at'][:10] }}</td>
+                            <td>
+                                <a href="/api/download-report/{{ a['id'] }}"
+                                   class="btn btn-sm btn-outline-purple">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.getElementById('sidebarToggle').addEventListener('click', function () {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+        document.getElementById('mainContent').classList.toggle('expanded');
+    });
+
+    // Score distribution chart
+    const scores = {{ analyses | map(attribute='ats_score') | list | tojson }};
+    const low  = scores.filter(s => s < 30).length;
+    const mid  = scores.filter(s => s >= 30 && s < 60).length;
+    const high = scores.filter(s => s >= 60).length;
+
+    new Chart(document.getElementById('distributionChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Low (0-30%)', 'Medium (30-60%)', 'High (60%+)'],
+            datasets: [{
+                data: [low, mid, high],
+                backgroundColor: ['#ef4444', '#f59e0b', '#22c55e'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { labels: { color: '#a0aec0' } }
+            }
+        }
+    });
+
+    // Monthly activity (simplified)
+    new Chart(document.getElementById('activityChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Total Users', 'Analyses', 'Avg Score'],
+            datasets: [{
+                label: 'Platform Stats',
+                data: {{ [total_users, total_analyses, avg_score] | tojson }},
+                backgroundColor: ['#6c63ff', '#3b82f6', '#22c55e'],
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: '#a0aec0' } } },
+            scales: {
+                y: { ticks: { color: '#a0aec0' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                x: { ticks: { color: '#a0aec0' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+            }
+        }
+    });
+</script>
+</body>
+</html>
