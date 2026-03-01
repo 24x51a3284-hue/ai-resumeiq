@@ -1,104 +1,70 @@
-# ============================================================
 # modules/database.py
-# Handles all database operations using SQLite
-# SQLite is a simple file-based database — perfect for beginners!
-# Your data is saved in a file called "resume_matcher.db"
-# ============================================================
+# PostgreSQL version — works permanently on Render
+# No more data loss on restart!
 
-import sqlite3
-from flask import g  # g = global object that Flask provides per request
+import os
+import psycopg2
+import psycopg2.extras
+from datetime import datetime
 
-# The database file will be created in the project folder
-DATABASE = 'resume_matcher.db'
+# Render gives you a DATABASE_URL environment variable automatically
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
 
 def get_db():
-    """
-    Get a connection to the database.
-    Flask's 'g' object stores the connection during a request,
-    so we don't open multiple connections.
-    """
-    if 'db' not in g:
-        # Connect to the database file (creates it if it doesn't exist)
-        g.db = sqlite3.connect(DATABASE)
-
-        # This makes results return as dictionary-like objects
-        # So you can do: result['username'] instead of result[0]
-        g.db.row_factory = sqlite3.Row
-
-    return g.db
+    """Open a new PostgreSQL connection."""
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+    return conn
 
 
-def close_db(e=None):
-    """Close the database connection when the request ends"""
-    db = g.pop('db', None)
-    if db is not None:
-        db.close()
+def close_db(conn):
+    """Close the connection."""
+    if conn:
+        conn.close()
 
 
 def init_db():
-    """
-    Create all the database tables if they don't exist yet.
-    This is called once when the app starts.
-    """
-    # We need to import app here to avoid circular imports
-    from flask import current_app
+    """Create tables if they don't exist, and create default admin."""
+    conn = get_db()
+    cur = conn.cursor()
 
-    # Use a direct connection for initialization
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-
-    # ---- TABLE 1: users ----
-    # Stores login information
-    cursor.execute('''
+    # Create users table
+    cur.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            username   TEXT NOT NULL,
-            email      TEXT NOT NULL UNIQUE,
-            password   TEXT NOT NULL,
-            role       TEXT DEFAULT 'user',
-            created_at TEXT NOT NULL
+            id SERIAL PRIMARY KEY,
+            username TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            is_admin INTEGER DEFAULT 0,
+            created_at TEXT
         )
     ''')
-    # Explanation:
-    # INTEGER PRIMARY KEY AUTOINCREMENT = auto-numbered ID (1, 2, 3...)
-    # TEXT NOT NULL = required text field
-    # UNIQUE = no two users can have the same email
-    # DEFAULT 'user' = everyone is a regular user unless specified
 
-    # ---- TABLE 2: analyses ----
-    # Stores each resume analysis result
-    cursor.execute('''
+    # Create analyses table
+    cur.execute('''
         CREATE TABLE IF NOT EXISTS analyses (
-            id               INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id          INTEGER NOT NULL,
-            resume_filename  TEXT NOT NULL,
-            ats_score        REAL NOT NULL,
-            matched_skills   TEXT,
-            missing_skills   TEXT,
-            job_description  TEXT,
-            created_at       TEXT NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users(id)
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id),
+            resume_filename TEXT,
+            ats_score REAL,
+            matched_skills TEXT,
+            missing_skills TEXT,
+            career_suggestions TEXT,
+            resume_tips TEXT,
+            created_at TEXT
         )
     ''')
-    # REAL = decimal number (like 75.5)
-    # TEXT = we store JSON strings for skill lists
-    # FOREIGN KEY = links this table to the users table
 
-    # ---- Create default admin user ----
-    # Check if admin already exists
-    existing_admin = cursor.execute(
-        'SELECT id FROM users WHERE email = ?', ('24x51a3284@srecnandyal.edu.in',)
-    ).fetchone()
-
-    if not existing_admin:
-        from datetime import datetime
-        cursor.execute(
-            'INSERT INTO users (username, email, password, role, created_at) VALUES (?, ?, ?, ?, ?)',
-            ('admin', '24x51a3284@srecnandyal.edu.in', 'Naik@2007', 'admin', datetime.now().isoformat())
+    # Create default admin if not exists
+    cur.execute("SELECT id FROM users WHERE email = '24x51a3284@srecnandyal.edu.in'")
+    if not cur.fetchone():
+        cur.execute(
+            "INSERT INTO users (username, email, password, is_admin, created_at) VALUES (%s, %s, %s, %s, %s)",
+            ('admin', '24x51a3284@srecnandyal.edu.in', 'Naik@2007', 1, datetime.now().isoformat())
         )
-        print("✅ Default admin created: admin@resumematcher.com / admin123")
+        print("✅ Default admin created: 24x51a3284@srecnandyal.edu.in / Naik@2007")
 
     conn.commit()
+    cur.close()
     conn.close()
-    print("✅ Database initialized successfully")
+    print("✅ PostgreSQL database initialized successfully")
