@@ -2,7 +2,7 @@
 # app.py — The BRAIN of your project (Flask Backend)
 # ============================================================
 
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
+from flask import Flask, render_template, request, jsonify, session
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
@@ -19,11 +19,10 @@ from modules.report_generator import generate_pdf_report
 app = Flask(__name__)
 app.secret_key = 'resume_matcher_secret_key_2024'
 
-# Upload folder configuration
 UPLOAD_FOLDER = 'static/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# ✅ IMPORTANT FIX FOR RENDER (create folder always)
+# ✅ IMPORTANT FIX FOR RENDER (create folder automatically)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {'pdf', 'docx', 'doc'}
@@ -40,14 +39,24 @@ def allowed_file(filename):
 
 
 # ============================================================
+# PAGE ROUTES
+# ============================================================
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/analyzer')
+def analyzer():
+    return render_template('analyzer.html')
+
+
+# ============================================================
 # PROCESS RESUME (MAIN API)
 # ============================================================
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_resume():
-
-    if 'user_id' not in session:
-        return jsonify({'error': 'Please login first'}), 401
 
     job_description = request.form.get('job_description', '').strip()
     if not job_description:
@@ -97,11 +106,10 @@ def analyze_resume():
     db = get_db()
     db.execute(
         '''INSERT INTO analyses
-           (user_id, resume_filename, ats_score, matched_skills, missing_skills,
+           (resume_filename, ats_score, matched_skills, missing_skills,
             job_description, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?)''',
+           VALUES (?, ?, ?, ?, ?, ?)''',
         (
-            session['user_id'],
             filename,
             final_score,
             json.dumps(matched_skills),
