@@ -242,6 +242,16 @@ def login():
     return render_template('login.html')
 
 
+@app.route('/admin-verify-all')
+def admin_verify_all():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET is_verified = true")
+    conn.commit()
+    cur.close(); conn.close()
+    return "✅ All users verified!"
+
+
 @app.route('/logout')
 def logout():
     session.clear()
