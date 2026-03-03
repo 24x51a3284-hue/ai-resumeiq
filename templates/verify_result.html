@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verification | AI ResumeIQ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body class="auth-body">
+<div class="auth-bg-shape shape-1"></div>
+<div class="auth-bg-shape shape-2"></div>
+
+<div class="d-flex align-items-center justify-content-center min-vh-100">
+    <div class="auth-card text-center" style="max-width:460px;">
+
+        {% if success %}
+        <div style="font-size:4rem; margin-bottom:16px;">✅</div>
+        <h3 style="color:#22c55e; font-weight:700; margin-bottom:12px;">Email Verified!</h3>
+        <p style="color:#a0aec0; margin-bottom:28px;">{{ message }}</p>
+        <a href="/login" class="btn btn-gradient w-100 py-3 fw-semibold">
+            <i class="fas fa-sign-in-alt me-2"></i>Login Now
+        </a>
+        {% else %}
+        <div style="font-size:4rem; margin-bottom:16px;">❌</div>
+        <h3 style="color:#ef4444; font-weight:700; margin-bottom:12px;">Verification Failed</h3>
+        <p style="color:#a0aec0; margin-bottom:28px;">{{ message }}</p>
+        <a href="/signup" class="btn btn-gradient w-100 py-3 fw-semibold">
+            <i class="fas fa-user-plus me-2"></i>Sign Up Again
+        </a>
+        {% endif %}
+
+        <div class="mt-4">
+            <a href="/" class="text-purple text-decoration-none small">
+                <i class="fas fa-home me-1"></i>Back to Home
+            </a>
+        </div>
+
+    </div>
+</div>
+</body>
+</html>

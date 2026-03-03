@@ -1,14 +1,13 @@
-# app.py — Updated for PostgreSQL (Render permanent storage)
-# Changes from SQLite version:
-#   - Uses %s placeholders instead of ?
-#   - get_db() returns a connection (not g.db)
-#   - All queries use conn/cur pattern and close after use
-
+# app.py — Updated with Gmail Email Verification
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
 from werkzeug.utils import secure_filename
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
+import smtplib
+import secrets
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 from modules.nlp_processor import extract_text_from_file, extract_skills, calculate_similarity
 from modules.database import init_db, get_db, close_db
@@ -19,8 +18,6 @@ from modules.report_generator import generate_pdf_report
 # ============================================================
 
 app = Flask(__name__)
-
-# Use environment variable for secret key (set in Render dashboard)
 app.secret_key = os.environ.get('SECRET_KEY', 'resume_matcher_secret_key_2024')
 
 UPLOAD_FOLDER = 'static/uploads'
@@ -30,15 +27,84 @@ ALLOWED_EXTENSIONS = {'pdf', 'docx', 'doc'}
 os.makedirs('static/uploads', exist_ok=True)
 os.makedirs('static/reports', exist_ok=True)
 
+# ============================================================
+# EMAIL CONFIGURATION
+# ============================================================
+
+GMAIL_ADDRESS  = os.environ.get('GMAIL_ADDRESS',  'naikfawaz@gmail.com')
+GMAIL_PASSWORD = os.environ.get('GMAIL_PASSWORD', 'mrek iolh euot liwi')
+APP_URL        = os.environ.get('APP_URL', 'https://ai-resumeiq.onrender.com')
+
 with app.app_context():
     init_db()
 
 # ============================================================
-# HELPER
+# HELPER FUNCTIONS
 # ============================================================
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def send_verification_email(to_email, username, token):
+    """Send a verification email with a unique token link."""
+    verify_url = f"{APP_URL}/verify-email/{token}"
+
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = '✅ Verify your AI ResumeIQ Account'
+    msg['From']    = f'AI ResumeIQ <{GMAIL_ADDRESS}>'
+    msg['To']      = to_email
+
+    html = f"""
+    <html>
+    <body style="font-family:Inter,Arial,sans-serif; background:#0f0f1a; color:#e2e8f0; padding:40px;">
+        <div style="max-width:520px; margin:0 auto; background:#1a1a2e; border-radius:16px;
+                    border:1px solid rgba(108,99,255,0.3); padding:40px;">
+
+            <div style="text-align:center; margin-bottom:30px;">
+                <h2 style="background:linear-gradient(135deg,#6c63ff,#3b82f6);
+                           -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+                           font-size:1.8rem; margin:0;">🧠 AI ResumeIQ</h2>
+                <p style="color:#a0aec0; margin-top:8px;">Email Verification</p>
+            </div>
+
+            <p style="color:#e2e8f0;">Hi <strong style="color:#a78bfa;">{username}</strong>,</p>
+            <p style="color:#a0aec0;">Thanks for signing up! Please verify your email address to activate your account.</p>
+
+            <div style="text-align:center; margin:30px 0;">
+                <a href="{verify_url}"
+                   style="background:linear-gradient(135deg,#6c63ff,#3b82f6);
+                          color:white; padding:14px 36px; border-radius:12px;
+                          text-decoration:none; font-weight:600; font-size:1rem;
+                          display:inline-block;">
+                    ✅ Verify My Email
+                </a>
+            </div>
+
+            <p style="color:#475569; font-size:0.85rem;">
+                This link expires in <strong>24 hours</strong>.<br>
+                If you didn't create an account, ignore this email.
+            </p>
+
+            <hr style="border-color:rgba(255,255,255,0.08); margin:24px 0;">
+            <p style="color:#475569; font-size:0.75rem; text-align:center;">
+                Developed by Naik Mohammed Fawaz | B.Tech CSE-DS, SREC Nandyal
+            </p>
+        </div>
+    </body>
+    </html>
+    """
+
+    msg.attach(MIMEText(html, 'html'))
+
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(GMAIL_ADDRESS, GMAIL_PASSWORD)
+            server.sendmail(GMAIL_ADDRESS, to_email, msg.as_string())
+        return True
+    except Exception as e:
+        print(f"Email error: {e}")
+        return False
 
 
 # ============================================================
@@ -64,20 +130,84 @@ def signup():
 
         conn = get_db()
         cur  = conn.cursor()
-        cur.execute('SELECT id FROM users WHERE email = %s', (email,))
-        if cur.fetchone():
-            cur.close(); conn.close()
-            return jsonify({'success': False, 'message': 'Email already registered'})
+
+        # Check if email already exists
+        cur.execute('SELECT id, is_verified FROM users WHERE email = %s', (email,))
+        existing = cur.fetchone()
+
+        if existing:
+            if existing['is_verified']:
+                cur.close(); conn.close()
+                return jsonify({'success': False, 'message': 'Email already registered. Please login.'})
+            else:
+                # Resend verification email
+                token = secrets.token_urlsafe(32)
+                expires_at = (datetime.now() + timedelta(hours=24)).isoformat()
+                cur.execute(
+                    'UPDATE users SET verify_token=%s, token_expires=%s WHERE email=%s',
+                    (token, expires_at, email)
+                )
+                conn.commit()
+                cur.close(); conn.close()
+                send_verification_email(email, username, token)
+                return jsonify({'success': True, 'message': 'Verification email resent! Please check your inbox.'})
+
+        # Generate verification token
+        token      = secrets.token_urlsafe(32)
+        expires_at = (datetime.now() + timedelta(hours=24)).isoformat()
 
         cur.execute(
-            'INSERT INTO users (username, email, password, created_at) VALUES (%s, %s, %s, %s)',
-            (username, email, password, datetime.now().isoformat())
+            '''INSERT INTO users (username, email, password, is_verified, verify_token, token_expires, created_at)
+               VALUES (%s, %s, %s, %s, %s, %s, %s)''',
+            (username, email, password, False, token, expires_at, datetime.now().isoformat())
         )
         conn.commit()
         cur.close(); conn.close()
-        return jsonify({'success': True, 'message': 'Account created! Please login.'})
+
+        # Send verification email
+        email_sent = send_verification_email(email, username, token)
+
+        if email_sent:
+            return jsonify({'success': True,
+                            'message': f'Account created! A verification email has been sent to {email}. Please check your inbox.'})
+        else:
+            return jsonify({'success': True,
+                            'message': 'Account created! (Email sending failed — contact admin to verify manually.)'})
 
     return render_template('signup.html')
+
+
+@app.route('/verify-email/<token>')
+def verify_email(token):
+    conn = get_db()
+    cur  = conn.cursor()
+    cur.execute('SELECT * FROM users WHERE verify_token = %s', (token,))
+    user = cur.fetchone()
+
+    if not user:
+        cur.close(); conn.close()
+        return render_template('verify_result.html',
+                               success=False,
+                               message='Invalid or expired verification link.')
+
+    # Check if token is expired
+    if datetime.now() > datetime.fromisoformat(user['token_expires']):
+        cur.close(); conn.close()
+        return render_template('verify_result.html',
+                               success=False,
+                               message='Verification link has expired. Please signup again.')
+
+    # Mark as verified
+    cur.execute(
+        'UPDATE users SET is_verified=%s, verify_token=%s WHERE id=%s',
+        (True, None, user['id'])
+    )
+    conn.commit()
+    cur.close(); conn.close()
+
+    return render_template('verify_result.html',
+                           success=True,
+                           message=f'Email verified successfully! Welcome, {user["username"]}!')
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -92,12 +222,17 @@ def login():
         user = cur.fetchone()
         cur.close(); conn.close()
 
-        if user:
-            session['user_id']  = user['id']
-            session['username'] = user['username']
-            return jsonify({'success': True, 'redirect': '/dashboard'})
-        else:
+        if not user:
             return jsonify({'success': False, 'message': 'Invalid email or password'})
+
+        # Check if email is verified
+        if not user['is_verified']:
+            return jsonify({'success': False,
+                            'message': '⚠️ Please verify your email first. Check your inbox for the verification link.'})
+
+        session['user_id']  = user['id']
+        session['username'] = user['username']
+        return jsonify({'success': True, 'redirect': '/dashboard'})
 
     return render_template('login.html')
 
@@ -148,7 +283,7 @@ def analyze_resume():
     if file.filename == '' or not allowed_file(file.filename):
         return jsonify({'error': 'Only PDF and DOCX files are allowed'}), 400
 
-    filename = secure_filename(file.filename)
+    filename  = secure_filename(file.filename)
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     filename  = f"{timestamp}_{filename}"
     filepath  = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -166,9 +301,9 @@ def analyze_resume():
     missing_skills = list(set([s.lower() for s in jd_skills]) -
                      set([s.lower() for s in resume_skills]))
 
-    similarity   = calculate_similarity(resume_text, job_description)
-    skill_ratio  = (len(matched_skills) / max(len(jd_skills), 1)) * 100
-    ats_score    = round((similarity * 0.6) + (skill_ratio * 0.4), 2)
+    similarity  = calculate_similarity(resume_text, job_description)
+    skill_ratio = (len(matched_skills) / max(len(jd_skills), 1)) * 100
+    ats_score   = round((similarity * 0.6) + (skill_ratio * 0.4), 2)
 
     career_suggestions = get_career_suggestions(matched_skills, missing_skills)
     resume_tips        = get_resume_tips(ats_score, missing_skills)
@@ -190,14 +325,14 @@ def analyze_resume():
     cur.close(); conn.close()
 
     return jsonify({
-        'success':            True,
-        'analysis_id':        analysis_id,
-        'ats_score':          ats_score,
-        'matched_skills':     matched_skills,
-        'missing_skills':     missing_skills,
-        'career_suggestions': career_suggestions,
-        'resume_tips':        resume_tips,
-        'similarity_score':   round(similarity, 2),
+        'success':             True,
+        'analysis_id':         analysis_id,
+        'ats_score':           ats_score,
+        'matched_skills':      matched_skills,
+        'missing_skills':      missing_skills,
+        'career_suggestions':  career_suggestions,
+        'resume_tips':         resume_tips,
+        'similarity_score':    round(similarity, 2),
         'skill_match_percent': round(skill_ratio, 2)
     })
 
@@ -211,7 +346,7 @@ def rank_resumes():
     files = request.files.getlist('resumes')
 
     if len(files) < 2:
-        return jsonify({'error': 'Please upload at least 2 resumes to rank'}), 400
+        return jsonify({'error': 'Please upload at least 2 resumes'}), 400
 
     results = []
     for file in files:
@@ -230,7 +365,6 @@ def rank_resumes():
                               set([s.lower() for s in jd_skills]))
                 skill_ratio = (len(matched) / max(len(jd_skills), 1)) * 100
                 final       = round((score * 0.6) + (skill_ratio * 0.4), 2)
-
                 results.append({
                     'name':           file.filename,
                     'score':          final,
@@ -264,10 +398,8 @@ def admin():
     total_analyses = len(analyses)
     avg_score      = round(sum(a['ats_score'] for a in analyses) / len(analyses), 1) if analyses else 0
 
-    return render_template('admin.html',
-                           users=users, analyses=analyses,
-                           total_users=total_users,
-                           total_analyses=total_analyses,
+    return render_template('admin.html', users=users, analyses=analyses,
+                           total_users=total_users, total_analyses=total_analyses,
                            avg_score=avg_score)
 
 
@@ -320,7 +452,7 @@ def get_history():
 
 
 # ============================================================
-# HELPER FUNCTIONS
+# CAREER & TIPS HELPERS
 # ============================================================
 
 def get_career_suggestions(matched_skills, missing_skills):
@@ -363,17 +495,20 @@ def get_career_suggestions(matched_skills, missing_skills):
 def get_resume_tips(score, missing_skills):
     tips = []
     if score < 30:
-        tips.extend(['🔴 Your resume needs significant improvement. Focus on adding relevant keywords.',
-                     '📝 Rewrite your resume to match the job description more closely.',
-                     '🎯 Add a strong summary section targeting this specific role.'])
+        tips.extend([
+            '🔴 Your resume needs significant improvement. Focus on adding relevant keywords.',
+            '📝 Rewrite your resume to match the job description more closely.',
+            '🎯 Add a strong summary section targeting this specific role.'])
     elif score < 60:
-        tips.extend(['🟡 Your resume is a partial match. Add more relevant skills.',
-                     '📊 Use numbers to quantify achievements (e.g., "Improved performance by 30%").',
-                     '🔑 Include action verbs like: Developed, Implemented, Designed, Led.'])
+        tips.extend([
+            '🟡 Your resume is a partial match. Add more relevant skills.',
+            '📊 Use numbers to quantify achievements (e.g., "Improved performance by 30%").',
+            '🔑 Include action verbs like: Developed, Implemented, Designed, Led.'])
     else:
-        tips.extend(['🟢 Great resume! A few tweaks will make it perfect.',
-                     '✨ Make sure your LinkedIn profile matches your resume.',
-                     '🌟 Add links to GitHub projects or portfolio.'])
+        tips.extend([
+            '🟢 Great resume! A few tweaks will make it perfect.',
+            '✨ Make sure your LinkedIn profile matches your resume.',
+            '🌟 Add links to GitHub projects or portfolio.'])
 
     if missing_skills:
         tips.append(f'📚 Learn these in-demand skills: {", ".join(missing_skills[:3])}')
