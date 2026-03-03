@@ -165,15 +165,12 @@ def signup():
         cur.execute(
             '''INSERT INTO users (username, email, password, is_verified, verify_token, token_expires, created_at)
                VALUES (%s, %s, %s, %s, %s, %s, %s)''',
-            (username, email, password, False, token, expires_at, datetime.now().isoformat())
+            (username, email, password, True, None, None, datetime.now().isoformat())
         )
         conn.commit()
         cur.close(); conn.close()
 
-        send_email_async(email, username, token)
-
-        return jsonify({'success': True,
-                        'message': f'Account created! A verification email has been sent to {email}. Please check your inbox.'})
+        return jsonify({'success': True, 'message': 'Account created! You can now login.'})
 
     return render_template('signup.html')
 
