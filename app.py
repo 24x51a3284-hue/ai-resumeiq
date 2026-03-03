@@ -1,4 +1,4 @@
-# app.py — Updated with Gmail Email Verification
+# app.py — Updated with Resend Email Verification
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
 from werkzeug.utils import secure_filename
 import os
@@ -140,7 +140,6 @@ def signup():
         conn = get_db()
         cur  = conn.cursor()
 
-        # Check if email already exists
         cur.execute('SELECT id, is_verified FROM users WHERE email = %s', (email,))
         existing = cur.fetchone()
 
@@ -149,7 +148,6 @@ def signup():
                 cur.close(); conn.close()
                 return jsonify({'success': False, 'message': 'Email already registered. Please login.'})
             else:
-                # Resend verification email
                 token = secrets.token_urlsafe(32)
                 expires_at = (datetime.now() + timedelta(hours=24)).isoformat()
                 cur.execute(
@@ -158,10 +156,9 @@ def signup():
                 )
                 conn.commit()
                 cur.close(); conn.close()
-                send_email_async(email, username, token)   # ✅ background
+                send_email_async(email, username, token)
                 return jsonify({'success': True, 'message': 'Verification email resent! Please check your inbox.'})
 
-        # Generate verification token
         token      = secrets.token_urlsafe(32)
         expires_at = (datetime.now() + timedelta(hours=24)).isoformat()
 
@@ -173,8 +170,7 @@ def signup():
         conn.commit()
         cur.close(); conn.close()
 
-        # Send verification email in background — won't block/timeout
-        send_email_async(email, username, token)   # ✅ background
+        send_email_async(email, username, token)
 
         return jsonify({'success': True,
                         'message': f'Account created! A verification email has been sent to {email}. Please check your inbox.'})
@@ -195,14 +191,12 @@ def verify_email(token):
                                success=False,
                                message='Invalid or expired verification link.')
 
-    # Check if token is expired
     if datetime.now() > datetime.fromisoformat(user['token_expires']):
         cur.close(); conn.close()
         return render_template('verify_result.html',
                                success=False,
                                message='Verification link has expired. Please signup again.')
 
-    # Mark as verified
     cur.execute(
         'UPDATE users SET is_verified=%s, verify_token=%s WHERE id=%s',
         (True, None, user['id'])
@@ -230,7 +224,6 @@ def login():
         if not user:
             return jsonify({'success': False, 'message': 'Invalid email or password'})
 
-        # Check if email is verified
         if not user['is_verified']:
             return jsonify({'success': False,
                             'message': '⚠️ Please verify your email first. Check your inbox for the verification link.'})
@@ -240,16 +233,6 @@ def login():
         return jsonify({'success': True, 'redirect': '/dashboard'})
 
     return render_template('login.html')
-
-
-@app.route('/admin-verify-all')
-def admin_verify_all():
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute("UPDATE users SET is_verified = true")
-    conn.commit()
-    cur.close(); conn.close()
-    return "✅ All users verified!"
 
 
 @app.route('/logout')
