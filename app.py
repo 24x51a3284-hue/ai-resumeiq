@@ -5,10 +5,8 @@ import os
 import threading
 from datetime import datetime, timedelta
 import json
-import smtplib
 import secrets
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import urllib.request
 
 from modules.nlp_processor import extract_text_from_file, extract_skills, calculate_similarity
 from modules.database import init_db, get_db, close_db
@@ -32,8 +30,7 @@ os.makedirs('static/reports', exist_ok=True)
 # EMAIL CONFIGURATION
 # ============================================================
 
-GMAIL_ADDRESS  = os.environ.get('GMAIL_ADDRESS',  'naikfawaz@gmail.com')
-GMAIL_PASSWORD = os.environ.get('GMAIL_PASSWORD', 'mrek iolh euot liwi')
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', 're_gWZyYWDq_7wCuEy724RRjApofsrKBd9SB')
 APP_URL        = os.environ.get('APP_URL', 'https://ai-resumeiq.onrender.com')
 
 with app.app_context():
@@ -48,30 +45,22 @@ def allowed_file(filename):
 
 
 def send_verification_email(to_email, username, token):
-    """Send a verification email with a unique token link."""
+    """Send a verification email via Resend API (HTTPS — works on Render free plan)."""
     verify_url = f"{APP_URL}/verify-email/{token}"
-
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = '✅ Verify your AI ResumeIQ Account'
-    msg['From']    = f'AI ResumeIQ <{GMAIL_ADDRESS}>'
-    msg['To']      = to_email
 
     html = f"""
     <html>
     <body style="font-family:Inter,Arial,sans-serif; background:#0f0f1a; color:#e2e8f0; padding:40px;">
         <div style="max-width:520px; margin:0 auto; background:#1a1a2e; border-radius:16px;
                     border:1px solid rgba(108,99,255,0.3); padding:40px;">
-
             <div style="text-align:center; margin-bottom:30px;">
                 <h2 style="background:linear-gradient(135deg,#6c63ff,#3b82f6);
                            -webkit-background-clip:text; -webkit-text-fill-color:transparent;
                            font-size:1.8rem; margin:0;">🧠 AI ResumeIQ</h2>
                 <p style="color:#a0aec0; margin-top:8px;">Email Verification</p>
             </div>
-
             <p style="color:#e2e8f0;">Hi <strong style="color:#a78bfa;">{username}</strong>,</p>
             <p style="color:#a0aec0;">Thanks for signing up! Please verify your email address to activate your account.</p>
-
             <div style="text-align:center; margin:30px 0;">
                 <a href="{verify_url}"
                    style="background:linear-gradient(135deg,#6c63ff,#3b82f6);
@@ -81,12 +70,10 @@ def send_verification_email(to_email, username, token):
                     ✅ Verify My Email
                 </a>
             </div>
-
             <p style="color:#475569; font-size:0.85rem;">
                 This link expires in <strong>24 hours</strong>.<br>
                 If you didn't create an account, ignore this email.
             </p>
-
             <hr style="border-color:rgba(255,255,255,0.08); margin:24px 0;">
             <p style="color:#475569; font-size:0.75rem; text-align:center;">
                 Developed by Naik Mohammed Fawaz | B.Tech CSE-DS, SREC Nandyal
@@ -96,14 +83,27 @@ def send_verification_email(to_email, username, token):
     </html>
     """
 
-    msg.attach(MIMEText(html, 'html'))
+    payload = json.dumps({
+        'from': 'AI ResumeIQ <onboarding@resend.dev>',
+        'to': [to_email],
+        'subject': '✅ Verify your AI ResumeIQ Account',
+        'html': html
+    }).encode('utf-8')
+
+    req = urllib.request.Request(
+        'https://api.resend.com/emails',
+        data=payload,
+        headers={
+            'Authorization': f'Bearer {RESEND_API_KEY}',
+            'Content-Type': 'application/json'
+        },
+        method='POST'
+    )
 
     try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10) as server:
-            server.login(GMAIL_ADDRESS, GMAIL_PASSWORD)
-            server.sendmail(GMAIL_ADDRESS, to_email, msg.as_string())
-        print(f"✅ Verification email sent to {to_email}")
-        return True
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            print(f"✅ Verification email sent to {to_email}")
+            return True
     except Exception as e:
         print(f"❌ Email error: {e}")
         return False
