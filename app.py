@@ -2,6 +2,7 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
 from werkzeug.utils import secure_filename
 import os
+import threading
 from datetime import datetime, timedelta
 import json
 import smtplib
@@ -98,13 +99,21 @@ def send_verification_email(to_email, username, token):
     msg.attach(MIMEText(html, 'html'))
 
     try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10) as server:
             server.login(GMAIL_ADDRESS, GMAIL_PASSWORD)
             server.sendmail(GMAIL_ADDRESS, to_email, msg.as_string())
+        print(f"✅ Verification email sent to {to_email}")
         return True
     except Exception as e:
-        print(f"Email error: {e}")
+        print(f"❌ Email error: {e}")
         return False
+
+
+def send_email_async(to_email, username, token):
+    """Send email in a background thread so it doesn't block the request."""
+    thread = threading.Thread(target=send_verification_email, args=(to_email, username, token))
+    thread.daemon = True
+    thread.start()
 
 
 # ============================================================
@@ -149,7 +158,7 @@ def signup():
                 )
                 conn.commit()
                 cur.close(); conn.close()
-                send_verification_email(email, username, token)
+                send_email_async(email, username, token)   # ✅ background
                 return jsonify({'success': True, 'message': 'Verification email resent! Please check your inbox.'})
 
         # Generate verification token
@@ -164,15 +173,11 @@ def signup():
         conn.commit()
         cur.close(); conn.close()
 
-        # Send verification email
-        email_sent = send_verification_email(email, username, token)
+        # Send verification email in background — won't block/timeout
+        send_email_async(email, username, token)   # ✅ background
 
-        if email_sent:
-            return jsonify({'success': True,
-                            'message': f'Account created! A verification email has been sent to {email}. Please check your inbox.'})
-        else:
-            return jsonify({'success': True,
-                            'message': 'Account created! (Email sending failed — contact admin to verify manually.)'})
+        return jsonify({'success': True,
+                        'message': f'Account created! A verification email has been sent to {email}. Please check your inbox.'})
 
     return render_template('signup.html')
 
